@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Login - LegalBot{% endblock %}
+
+{% block additional_styles %}
+.admin-login-container {
+    max-width: 400px;
+    margin: 60px auto;
+    padding: 2rem;
+    background-color: #FFF;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.admin-icon {
+    color: var(--primary-color);
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.btn-admin {
+    background-color: var(--primary-color);
+    color: var(--light-birch);
+    width: 100%;
+    margin-top: 15px;
+    transition: background-color 0.3s;
+}
+
+.btn-admin:hover {
+    background-color: var(--accent-color);
+    color: var(--light-birch);
+}
+
+.error-message {
+    display: none;
+    margin-top: 10px;
+}
+
+.back-link {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.back-link a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.back-link a:hover {
+    text-decoration: underline;
+    color: var(--accent-color);
+}
+{% endblock %}
+
+{% block content %}
+<div class="admin-login-container">
+    <div class="text-center">
+        <i class="fas fa-user-shield admin-icon"></i>
+        <h2 class="mb-4">Admin Login</h2>
+    </div>
+    
+    <form id="adminLoginForm">
+        <div class="mb-3">
+            <input type="text" class="form-control" id="adminEmail" placeholder="Admin Username" required>
+        </div>
+        <div class="mb-3">
+            <input type="password" class="form-control" id="adminPassword" placeholder="Admin Password" required>
+        </div>
+        <button type="submit" class="btn btn-admin">
+            <i class="fas fa-sign-in-alt me-2"></i> Login as Admin
+        </button>
+    </form>
+    
+    <div class="back-link">
+        <a href="/api/auth/login"><i class="fas fa-arrow-left me-1"></i> Back to User Login</a>
+    </div>
+
+    <div id="error-message" class="alert alert-danger error-message"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('adminEmail').value;
+    const password = document.getElementById('adminPassword').value;
+    
+    try {
+        const response = await fetch('/api/auth/admin/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            window.location.href = '/api/admin/dashboard';
+        } else {
+            throw new Error(data.error || 'Authentication failed');
+        }
+    } catch (error) {
+        const errorDiv = document.getElementById('error-message');
+        errorDiv.textContent = error.message;
+        errorDiv.style.display = 'block';
+    }
+});
+</script>
+{% endblock %}

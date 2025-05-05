@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - LegalBot{% endblock %}
+
+{% block additional_styles %}
+.profile-header {
+    background-color: var(--primary-color);
+    color: var(--light-birch);
+    padding: 2rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 60px;
+    background-color: var(--secondary-color);
+    margin: 0 auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: var(--primary-color);
+}
+
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background-color: #FFF;
+    padding: 1.5rem;
+    border-radius: 10px;
+    text-align: center;
+    border-left: 5px solid var(--accent-color);
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin: 0.5rem 0;
+}
+
+.preferences-section {
+    background-color: #FFF;
+    padding: 2rem;
+    border-radius: 15px;
+}
+
+.preference-item {
+    margin-bottom: 1.5rem;
+}
+
+.preference-item label {
+    font-weight: 500;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+}
+
+.save-button {
+    background-color: var(--primary-color);
+    color: var(--light-birch);
+    border: none;
+    padding: 10px 30px;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: background-color 0.3s;
+}
+
+.save-button:hover {
+    background-color: var(--accent-color);
+}
+{% endblock %}
+
+{% block content %}
+<div class="profile-header">
+    <div class="profile-avatar">
+        <i class="fas fa-user"></i>
+    </div>
+    <h2>{{ user.name or 'User' }}</h2>
+    <p>{{ user.email }}</p>
+    <p><small>Member since {{ user.created_at.strftime('%B %d, %Y') }}</small></p>
+</div>
+
+<div class="stats-container">
+    <div class="stat-card">
+        <i class="fas fa-comments fa-2x" style="color: var(--accent-color)"></i>
+        <div class="stat-value">{{ total_chats }}</div>
+        <div class="stat-label">Total Chats</div>
+    </div>
+    <div class="stat-card">
+        <i class="fas fa-calendar-alt fa-2x" style="color: var(--accent-color)"></i>
+        <div class="stat-value">{{ chats_today }}</div>
+        <div class="stat-label">Chats Today</div>
+    </div>
+    <div class="stat-card">
+        <i class="fas fa-clock fa-2x" style="color: var(--accent-color)"></i>
+        <div class="stat-value">{{ avg_response_time }}s</div>
+        <div class="stat-label">Avg. Response Time</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('preferencesForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const preferences = {
+        language: document.getElementById('language').value,
+        email_notifications: document.getElementById('emailNotifications').checked,
+        sound_enabled: document.getElementById('soundEnabled').checked,
+        theme: document.getElementById('theme').value
+    };
+    
+    try {
+        const response = await fetch('/api/profile/preferences', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(preferences)
+        });
+        
+        if (response.ok) {
+            alert('Preferences saved successfully!');
+        } else {
+            throw new Error('Failed to save preferences');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error saving preferences. Please try again.');
+    }
+});
+</script>
+{% endblock %}

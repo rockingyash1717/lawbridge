@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Login - LegalBot{% endblock %}
+
+{% block additional_styles %}
+.login-container {
+    max-width: 400px;
+    margin: 60px auto;
+    padding: 2rem;
+    background-color: #FFF;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-google {
+    background-color: var(--primary-color);
+    color: var(--light-birch);
+    width: 100%;
+    margin-bottom: 15px;
+    transition: background-color 0.3s;
+}
+
+.btn-google:hover {
+    background-color: var(--accent-color);
+    color: var(--light-birch);
+}
+
+.divider {
+    text-align: center;
+    margin: 20px 0;
+    position: relative;
+}
+
+.divider::before,
+.divider::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 45%;
+    height: 1px;
+    background-color: var(--secondary-color);
+}
+
+.divider::before { left: 0; }
+.divider::after { right: 0; }
+
+.auth-toggle {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.auth-toggle a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.auth-toggle a:hover {
+    text-decoration: underline;
+    color: var(--accent-color);
+}
+
+.form-container {
+    margin-top: 20px;
+}
+
+.error-message {
+    display: none;
+    margin-top: 10px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <h2 class="text-center mb-4">
+        <i class="fas fa-gavel"></i> Welcome to LegalBot
+    </h2>
+    
+    <!-- Google Sign In Button -->
+    <button id="googleLogin" class="btn btn-google">
+        <i class="fab fa-google me-2"></i> Continue with Google
+    </button>
+
+    <div class="divider">OR</div>
+
+    <!-- Login Form -->
+    <div id="loginForm" class="form-container">
+        <form onsubmit="return handleEmailLogin(event)">
+            <div class="mb-3">
+                <input type="email" class="form-control" id="loginEmail" placeholder="Email" required>
+            </div>
+            <div class="mb-3">
+                <input type="password" class="form-control" id="loginPassword" placeholder="Password" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Login</button>
+        </form>
+        <div class="auth-toggle">
+            <small>Don't have an account? <a href="#" onclick="toggleForms()">Sign Up</a></small>
+            <br>
+            <small>Admin? <a href="/api/auth/admin/login">Login as Admin</a></small>
+        </div>
+    </div>
+
+    <!-- Sign Up Form -->
+    <div id="signupForm" class="form-container" style="display: none;">
+        <form onsubmit="return handleEmailSignup(event)">
+            <div class="mb-3">
+                <input type="text" class="form-control" id="signupName" placeholder="Full Name" required>
+            </div>
+            <div class="mb-3">
+                <input type="email" class="form-control" id="signupEmail" placeholder="Email" required>
+            </div>
+            <div class="mb-3">
+                <input type="password" class="form-control" id="signupPassword" placeholder="Password" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Sign Up</button>
+        </form>
+        <div class="auth-toggle">
+            <small>Already have an account? <a href="#" onclick="toggleForms()">Login</a></small>
+        </div>
+    </div>
+
+    <div id="error-message" class="alert alert-danger error-message"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script>
+    let isLoginForm = true;
+
+    function toggleForms() {
+        isLoginForm = !isLoginForm;
+        document.getElementById('loginForm').style.display = isLoginForm ? 'block' : 'none';
+        document.getElementById('signupForm').style.display = isLoginForm ? 'none' : 'block';
+    }
+
+    // Load Firebase configuration from environment variables
+    fetch('/api/auth/config')
+        .then(response => response.json())
+        .then(config => {
+            // Initialize Firebase with config from backend
+            firebase.initializeApp(config);
+
+            // Google Sign In Handler
+            document.getElementById('googleLogin').addEventListener('click', () => {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                firebase.auth().signInWithPopup(provider)
+                    .then((result) => {
+                        return result.user.getIdToken();
+                    })
+                    .then((idToken) => {
+                        return fetch('/api/auth/verify-token', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ idToken })
+                        });
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.href = '/api/chat';
+                        } else {
+                            throw new Error('Authentication failed');
+                        }
+                    })
+                    .catch(handleError);
+            });
+        });
+
+    // Email/Password Login Handler
+    function handleEmailLogin(event) {
+        event.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+
+        firebase.auth().signInWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                return userCredential.user.getIdToken();
+            })
+            .then((idToken) => {
+                return fetch('/api/auth/verify-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ idToken })
+                });
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/api/chat';
+                } else {
+                    throw new Error('Authentication failed');
+                }
+            })
+            .catch(handleError);
+
+        return false;
+    }
+
+    // Email/Password Sign Up Handler
+    function handleEmailSignup(event) {
+        event.preventDefault();
+        const name = document.getElementById('signupName').value;
+        const email = document.getElementById('signupEmail').value;
+        const password = document.getElementById('signupPassword').value;
+
+        firebase.auth().createUserWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                // Update user profile with name
+                return userCredential.user.updateProfile({
+                    displayName: name
+                }).then(() => userCredential.user.getIdToken());
+            })
+            .then((idToken) => {
+                return fetch('/api/auth/verify-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ idToken })
+                });
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/api/chat';
+                } else {
+                    throw new Error('Authentication failed');
+                }
+            })
+            .catch(handleError);
+
+        return false;
+    }
+
+    function handleError(error) {
+        const errorDiv = document.getElementById('error-message');
+        errorDiv.textContent = error.message;
+        errorDiv.style.display = 'block';
+    }
+</script>
+{% endblock %}

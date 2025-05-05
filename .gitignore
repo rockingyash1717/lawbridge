@@ -1,0 +1,9 @@
+# Common virtual environment names
+venv/
+env
+.venv/
+.env
+
+chatbot/__pycache__
+chatbot/data-ingestion-local
+firebase-service-account.json

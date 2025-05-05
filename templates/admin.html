@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - LegalBot{% endblock %}
+
+{% block additional_styles %}
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background-color: #FFF;
+    padding: 1.5rem;
+    border-radius: 10px;
+    text-align: center;
+    border-left: 5px solid var(--accent-color);
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin: 0.5rem 0;
+}
+
+.stat-label {
+    color: var(--text-color);
+    font-size: 1.1rem;
+}
+
+.users-table {
+    background-color: #FFF;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.table th {
+    background-color: var(--primary-color);
+    color: var(--light-birch);
+    border: none;
+}
+
+.table td {
+    vertical-align: middle;
+    color: var(--text-color);
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: var(--light-birch);
+}
+
+.badge-active {
+    background-color: var(--accent-color);
+    color: var(--light-birch);
+}
+
+.badge-inactive {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+}
+
+.chart-container {
+    background-color: #FFF;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.refresh-button {
+    background-color: var(--primary-color);
+    color: var(--light-birch);
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+}
+
+.refresh-button:hover {
+    background-color: var(--accent-color);
+    color: var(--light-birch);
+}
+{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    <div class="admin-header">
+        <h2><i class="fas fa-shield-alt"></i> Admin Dashboard</h2>
+        <button class="refresh-button" onclick="fetchDashboardData()">
+            <i class="fas fa-sync-alt"></i> Refresh Data
+        </button>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <i class="fas fa-users fa-2x" style="color: var(--accent-color)"></i>
+            <div class="stat-value" id="totalUsers">-</div>
+            <div class="stat-label">Total Users</div>
+        </div>
+        <div class="stat-card">
+            <i class="fas fa-user-clock fa-2x" style="color: var(--accent-color)"></i>
+            <div class="stat-value" id="activeUsers">-</div>
+            <div class="stat-label">Active Today</div>
+        </div>
+        <div class="stat-card">
+            <i class="fas fa-comments fa-2x" style="color: var(--accent-color)"></i>
+            <div class="stat-value" id="totalChats">-</div>
+            <div class="stat-label">Total Chats</div>
+        </div>
+    </div>
+
+    <div class="users-table">
+        <h3 class="mb-4"><i class="fas fa-user-friends"></i> User Management</h3>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Joined</th>
+                        <th>Last Active</th>
+                        <th>Chats</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <tr>
+                        <td colspan="6" class="text-center">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <h3 class="mb-4"><i class="fas fa-chart-bar"></i> Usage Analytics</h3>
+        <canvas id="usageChart"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let usageChart;
+
+function formatDate(date) {
+    return new Date(date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function initializeChart(data) {
+    const ctx = document.getElementById('usageChart').getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (usageChart) {
+        usageChart.destroy();
+    }
+    
+    // Create new chart
+    usageChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Daily Active Users',
+                data: data.activeUsers,
+                borderColor: '#8B4513',
+                backgroundColor: 'rgba(139, 69, 19, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Chat Sessions',
+                data: data.chatSessions,
+                borderColor: '#A0522D',
+                backgroundColor: 'rgba(160, 82, 45, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: 'Platform Usage Trends'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+async function fetchDashboardData() {
+    try {
+        const response = await fetch('/api/admin/dashboard-data');
+        const data = await response.json();
+        
+        if (data.success) {
+            // Update statistics
+            document.getElementById('totalUsers').textContent = data.totalUsers;
+            document.getElementById('activeUsers').textContent = data.activeToday;
+            document.getElementById('totalChats').textContent = data.totalChats;
+            
+            // Update users table
+            const tableBody = document.getElementById('usersTableBody');
+            tableBody.innerHTML = data.users.map(user => `
+                <tr>
+                    <td>${user.name || 'N/A'}</td>
+                    <td>${user.email}</td>
+                    <td>${formatDate(user.created_at)}</td>
+                    <td>${user.last_login ? formatDate(user.last_login) : 'Never'}</td>
+                    <td>${user.total_chats}</td>
+                    <td>
+                        <span class="badge ${user.last_login && new Date(user.last_login) >= new Date(Date.now() - 24*60*60*1000) ? 'badge-active' : 'badge-inactive'}">
+                            ${user.last_login && new Date(user.last_login) >= new Date(Date.now() - 24*60*60*1000) ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+            
+            // Initialize/update chart
+            const chartData = {
+                labels: ['7 days ago', '6 days ago', '5 days ago', '4 days ago', '3 days ago', '2 days ago', 'Today'],
+                activeUsers: [12, 15, 18, 14, 20, 17, data.activeToday],
+                chatSessions: [25, 30, 35, 28, 40, 34, data.totalChats]
+            };
+            initializeChart(chartData);
+            
+        } else {
+            throw new Error(data.error || 'Failed to fetch dashboard data');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading dashboard data. Please try again.');
+    }
+}
+
+// Initial load
+fetchDashboardData();
+
+// Refresh data every 5 minutes
+setInterval(fetchDashboardData, 5 * 60 * 1000);
+</script>
+{% endblock %}
