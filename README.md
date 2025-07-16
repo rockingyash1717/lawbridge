@@ -22,13 +22,7 @@ Welcome to Lawbridge, a sophisticated, context-aware legal chatbot designed to p
 
 -----
 
-##  Screenshots
 
-| Login Page | Chat Interface |
-| :--------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------: |
-| \<img src="https://www.google.com/search?q=https://raw.githubusercontent.com/rockingyash1717/lawbridge/main/Screenshot%25202025-07-16%2520142637.png" width="400"\> | \<img src="https://www.google.com/search?q=https://raw.githubusercontent.com/rockingyash1717/lawbridge/main/Screenshot%25202025-07-16%2520143944.png" width="400"\> |
-
------
 
 ##  Tech Stack & Architecture
 
